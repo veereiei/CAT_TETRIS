@@ -1,6 +1,6 @@
 body {
-    margin: 0;
     background: #000; /* พื้นหลังสีดำ */
+    width: 83%;
     display: flex;
     justify-content: center; /* จัดกึ่งกลางแนวนอน */
     align-items: center; /* จัดกึ่งกลางแนวตั้ง */
@@ -8,9 +8,3 @@ body {
     font-family: consolas, monospace;
     overflow: hidden; /* ซ่อน scrollbar */
 }
-
-canvas { 
-  display: block; 
-  border: 2px solid transparent;
-}
-
