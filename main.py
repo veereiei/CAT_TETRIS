@@ -11,14 +11,14 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont("consolas", 22, bold=True)
 info_center_x = WIDTH + INFO_WIDTH // 2
 
-bg_start = pygame.image.load("start_bg.png").convert()
+bg_start = pygame.image.load("pic/start_bg.png").convert()
 bg_start = pygame.transform.scale(bg_start, (WIDTH + INFO_WIDTH, HEIGHT))
-bg_gameover = pygame.image.load("gameover_bg.png").convert()
+bg_gameover = pygame.image.load("pic/gameover_bg.png").convert()
 bg_gameover = pygame.transform.scale(bg_gameover, (WIDTH + INFO_WIDTH, HEIGHT))
-bg_game = pygame.image.load("background.png").convert()
+bg_game = pygame.image.load("pic/background.png").convert()
 bg_game = pygame.transform.scale(bg_game, (WIDTH + INFO_WIDTH, HEIGHT))
 
-cat_img = pygame.image.load("cat.png").convert_alpha()
+cat_img = pygame.image.load("pic/cat.png").convert_alpha()
 cat_img = pygame.transform.scale(cat_img, (BLOCK, BLOCK))
 
 COLORS = [(0,255,255),(0,0,255),(255,165,0),(255,255,0),(0,255,0),(128,0,128),(255,0,0)]
@@ -127,6 +127,9 @@ def game_over_screen(score):
         mx,my = pygame.mouse.get_pos()
         btn_replay = draw_button_modern("REPLAY", HEIGHT//2, (mx,my))
         btn_exit   = draw_button_modern("EXIT", HEIGHT//2 + 70, (mx,my))
+        score_text = font.render(f"Your Score : {score}", True, WHITE)
+        score_rect = score_text.get_rect(center=((WIDTH + INFO_WIDTH)//2, HEIGHT//2 - 70))
+        screen.blit(score_text, score_rect)
         pygame.display.flip()
         for e in pygame.event.get():
             if e.type==pygame.QUIT: pygame.quit(); sys.exit()
