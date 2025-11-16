@@ -89,43 +89,57 @@ const controlButtons = [
 
 /** คำนวณขนาด Block และ Canvas ใหม่ให้เข้ากับหน้าจอ */
 function calculateSizes() {
-    // 1. กำหนดอัตราส่วนที่ต้องการ (Width : Height)
-    // Grid: 10 Block, Info Panel: ประมาณ 4 Block (40% ของ 10)
-    // Canvas รวม: 14 Block (กว้าง) x 20 Block (สูง)
-    const COLS_RATIO = COLS + COLS * 0.4; // 14.0
-    const ROWS_RATIO = ROWS;              // 20.0
+    // กำหนด margin จากขอบหน้าจอที่มากขึ้นสำหรับ Mobile
+    const viewportMargin = (window.innerWidth <= 800 || 'ontouchstart' in window) ? 0.05 : 0.025; // 5% สำหรับมือถือ, 2.5% สำหรับ PC
     
-    const maxCanvasWidth = window.innerWidth * 0.95; 
-    const maxCanvasHeight = window.innerHeight * 0.95; 
+    const maxUsableWidth = window.innerWidth * (1 - viewportMargin * 2); 
+    const maxUsableHeight = window.innerHeight * (1 - viewportMargin * 2); 
+    const MIN_INFO_WIDTH = 120; // Info Panel ขั้นต่ำ 120px
 
-    // 2. คำนวณขนาด Block สูงสุดที่เป็นไปได้ โดยอิงจากความกว้างและความสูง
-    // Block_w = maxCanvasWidth / COLS_RATIO (14.0)
-    // Block_h = maxCanvasHeight / ROWS_RATIO (20.0)
-    const blockBasedOnWidth = Math.floor(maxCanvasWidth / COLS_RATIO);
-    const blockBasedOnHeight = Math.floor(maxCanvasHeight / ROWS_RATIO);
-
-    // 3. เลือกขนาด Block ที่เล็กที่สุด เพื่อให้ Canvas ไม่เกินขอบจอในทุกทิศทาง
-    let tempBlock = Math.min(blockBasedOnWidth, blockBasedOnHeight);
+    // --- ส่วนแก้ไขใหม่: คำนวณพื้นที่สำหรับปุ่มควบคุมมือถือ ---
+    // ประมาณการความสูงของปุ่มควบคุมด้านล่าง
+    let mobileControlsHeight = 0;
+    if (window.innerWidth <= 800 || 'ontouchstart' in window) {
+        // ใช้ 2 ปุ่ม (ซ้าย-ขวา) + padding + drop button
+        // ประมาณการ: 2 เท่าของปุ่ม (ซ้าย-ขวา) + 2 * padding
+        const buttonSizeEstimate = Math.max(50, Math.floor(maxUsableWidth / (COLS * 0.8 / 2 + 0.4))); // ปุ่มซ้าย-ขวา
+        mobileControlsHeight = buttonSizeEstimate + 20; // ปุ่มเดี่ยว + padding
+    }
     
-    // 4. จำกัดขนาด Block
+    // หักความสูงของปุ่มควบคุมมือถือออกจากพื้นที่ใช้งาน
+    const effectiveMaxHeight = maxUsableHeight - mobileControlsHeight;
+
+    // 1. คำนวณ BLOCK ที่ใหญ่ที่สุดที่เป็นไปได้
+    
+    // a. BLOCK จากข้อจำกัดความสูง (20 แถว) โดยหักความสูงปุ่มออกไปแล้ว
+    const blockBasedOnHeight = Math.floor(effectiveMaxHeight / ROWS);
+    
+    // b. BLOCK จากข้อจำกัดความกว้าง (โดยสมมติว่า Info Panel เป็น 120px ขั้นต่ำ)
+    let blockBasedOnWidth = Math.floor((maxUsableWidth - MIN_INFO_WIDTH) / COLS);
+
+    // 2. เลือก BLOCK ที่เล็กที่สุด เพื่อให้ Canvas ไม่เกินขอบจอ
+    let tempBlock = Math.min(blockBasedOnHeight, blockBasedOnWidth);
+
+    // 3. จำกัดขนาด Block
     BLOCK = Math.max(15, Math.min(INITIAL_BLOCK, tempBlock)); // ขั้นต่ำ 15px, สูงสุด 40px
 
-    // 5. กำหนดค่าสุดท้ายตาม BLOCK ใหม่
+    // 4. กำหนดค่าสุดท้ายตาม BLOCK ที่ได้
     WIDTH = COLS * BLOCK;
     HEIGHT = ROWS * BLOCK;
     
-    // คำนวณ INFO_WIDTH ตามสัดส่วน 40% ของ Grid WIDTH
-    INFO_WIDTH = Math.max(120, Math.floor(WIDTH * 0.4)); 
-    
-    // ตรวจสอบขั้นสุดท้าย: หาก INFO_WIDTH ขั้นต่ำ (120) ทำให้ Canvas กว้างเกินไป ให้ปรับ Block ลงเล็กน้อย
-    if (WIDTH + INFO_WIDTH > maxCanvasWidth) {
-         // นี่เป็นกรณีที่ INFO_WIDTH โดนบังคับให้เป็น 120px และทำให้เกินขอบ
-         // ปรับ BLOCK อีกครั้งให้แน่ใจว่า Canvas ไม่เกิน 95% ของความกว้างหน้าจอ
-         BLOCK = Math.floor((maxCanvasWidth - 120) / COLS);
-         WIDTH = COLS * BLOCK;
-         INFO_WIDTH = 120;
+    // 5. คำนวณ INFO_WIDTH
+    INFO_WIDTH = Math.floor(WIDTH * 0.4); 
+    if (INFO_WIDTH < MIN_INFO_WIDTH) {
+        INFO_WIDTH = MIN_INFO_WIDTH;
     }
-
+    
+    // 6. ตรวจสอบความปลอดภัยสุดท้ายสำหรับ INFO_WIDTH (หากยังล้น ให้ปรับ)
+    // นี่คือการตรวจสอบให้แน่ใจว่า INFO_WIDTH ไม่ทำให้ CANVAS_WIDTH เกิน maxUsableWidth
+    if (WIDTH + INFO_WIDTH > maxUsableWidth) {
+        INFO_WIDTH = maxUsableWidth - WIDTH;
+        INFO_WIDTH = Math.max(0, INFO_WIDTH); // ป้องกันค่าติดลบ
+    }
+    
     CANVAS_WIDTH = WIDTH + INFO_WIDTH;
     CANVAS_HEIGHT = HEIGHT;
     infoCenterX = WIDTH + INFO_WIDTH / 2;
@@ -135,15 +149,14 @@ function calculateSizes() {
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
-    
-    // เพิ่มการปรับตำแหน่งปุ่มมือถือ
-    // drawMobileControls() จะใช้ค่า BLOCK, WIDTH, HEIGHT, INFO_WIDTH ที่อัปเดตแล้ว
-}
-// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
-window.addEventListener('resize', calculateSizes);
-// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
-window.addEventListener('resize', calculateSizes);
 
+    // --- ส่วนแก้ไขใหม่: จัดตำแหน่งปุ่มควบคุมมือถือใน drawMobileControls ---
+    // (ตอนนี้ drawMobileControls จะใช้ CANVAS_HEIGHT ที่อัปเดตแล้ว)
+    // เราต้องมั่นใจว่าปุ่มไม่ทับ Grid
+}
+
+// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
+window.addEventListener('resize', calculateSizes);
 
 // --- Helper Functions (โค้ดเดิม) ---
 
@@ -406,36 +419,55 @@ function drawGame() {
 /** วาดปุ่มควบคุมบนมือถือ */
 function drawMobileControls() {
     // ปรับขนาดปุ่มควบคุมทั้งหมดให้เป็นแบบ Relative
-    const buttonSize = Math.max(50, Math.floor(WIDTH / 5)); // ปุ่มซ้าย/ขวา (ใช้พื้นที่ Grid)
-    const rotSize = Math.max(40, Math.floor(INFO_WIDTH / 2) - 10); // ปุ่ม Info Panel
+    // คำนวณขนาดปุ่มและ padding ใหม่ให้สัมพันธ์กับพื้นที่ Info Panel
     const padding = 10;
-    
-    // 1. ปุ่มซ้าย-ขวา (แถวล่างซ้าย) - <<< กำหนดให้เป็นสีใส (Transparent)
-    const startX = padding;
-    const startY = HEIGHT - buttonSize - padding;
+    const buttonHeight = Math.max(40, Math.floor(INFO_WIDTH / 2) - padding); // ความสูงปุ่มใน Info Panel
+    const buttonWidth = Math.max(50, Math.floor(WIDTH / 4)); // ความกว้างปุ่มซ้าย-ขวา (ใช้พื้นที่ Grid)
 
-    controlButtons[0] = { ...controlButtons[0], x: startX, y: startY, w: buttonSize, h: buttonSize };
-    drawControlBtn(controlButtons[0], mousePosition, true); // <<< ส่งค่า true เพื่อให้เป็นปุ่มใส
+    // 1. ปุ่มซ้าย-ขวา (แถวล่างซ้าย) - ให้ปุ่มอยู่ใต้ Grid
+    // ต้องกำหนดให้ปุ่มเหล่านี้ 'ลอย' อยู่ด้านนอก Canvas หลัก หรือเพิ่มความสูงของ Canvas ชั่วคราว
+    // แต่เพื่อแก้ปัญหาเดิมอย่างง่ายที่สุด เราจะวางมันไว้ที่ขอบล่างของหน้าจอ
+    // หรือปรับ CANVAS_HEIGHT ให้สูงขึ้นเพื่อให้มีที่สำหรับปุ่ม
     
-    controlButtons[1] = { ...controlButtons[1], x: startX + buttonSize + padding, y: startY, w: buttonSize, h: buttonSize };
-    drawControlBtn(controlButtons[1], mousePosition, true); // <<< ส่งค่า true เพื่อให้เป็นปุ่มใส
+    // ณ จุดนี้ CANVAS_HEIGHT ถูกกำหนดไว้แล้ว ดังนั้นเราจะวางปุ่มไว้ด้านล่างของ CANVAS_HEIGHT
+    // หรือถ้าเราต้องการให้ปุ่มอยู่นอก Canvas แต่ยังอยู่ในสายตา เราต้องทำ 2 อย่าง:
+    //    a) เพิ่มความสูงของ canvas.height ใน calculateSizes ให้มีพื้นที่สำหรับปุ่ม
+    //    b) วาดปุ่มที่ตำแหน่ง Y = CANVAS_HEIGHT + (offset)
+    
+    // สำหรับตอนนี้เราจะลองปรับตำแหน่งปุ่มให้ไปอยู่ด้านล่างสุดของ CANVAS_HEIGHT ที่คำนวณไว้
+    // และแก้ไขปัญหาการคำนวณ CANVAS_HEIGHT ใน calculateSizes ให้เผื่อที่สำหรับปุ่ม
 
-    // 2. ปุ่มหมุน (บน Info Panel)
-    const rotStartX = WIDTH + padding;
-    let rotY = HEIGHT - rotSize - padding;
-    
-    controlButtons[2] = { ...controlButtons[2], x: rotStartX, y: rotY, w: rotSize, h: rotSize };
-    drawControlBtn(controlButtons[2], mousePosition); // ปกติ
-    
-    controlButtons[3] = { ...controlButtons[3], x: rotStartX + rotSize + padding, y: rotY, w: rotSize, h: rotSize };
-    drawControlBtn(controlButtons[3], mousePosition); // ปกติ
+    // ตำแหน่งปุ่ม ซ้าย/ขวา
+    const moveBtnY = CANVAS_HEIGHT - buttonHeight - padding;
+    const leftBtnX = padding;
+    const rightBtnX = leftBtnX + buttonWidth + padding;
 
-    // 3. ปุ่ม Drop (อยู่บนปุ่มหมุน)
-    rotY = rotY - rotSize - padding;
-    controlButtons[4] = { ...controlButtons[4], x: rotStartX, y: rotY, w: INFO_WIDTH - 2 * padding, h: rotSize };
-    drawControlBtn(controlButtons[4], mousePosition); // ปกติ
+    controlButtons[0] = { ...controlButtons[0], x: leftBtnX, y: moveBtnY, w: buttonWidth, h: buttonHeight };
+    drawControlBtn(controlButtons[0], mousePosition, true); 
+    
+    controlButtons[1] = { ...controlButtons[1], x: rightBtnX, y: moveBtnY, w: buttonWidth, h: buttonHeight };
+    drawControlBtn(controlButtons[1], mousePosition, true); 
+
+    // 2. ปุ่มหมุน (บน Info Panel) และ ปุ่ม Drop
+    // จัดให้อยู่ใน Info Panel ด้านขวา ไม่ให้ทับ Grid
+    const infoPanelX = WIDTH;
+    
+    // ตำแหน่งปุ่ม Drop (อยู่บนสุดของปุ่มควบคุม Info Panel)
+    let dropBtnY = CANVAS_HEIGHT - (buttonHeight * 2) - (padding * 2);
+    controlButtons[4] = { ...controlButtons[4], x: infoPanelX + padding, y: dropBtnY, w: INFO_WIDTH - (padding * 2), h: buttonHeight };
+    drawControlBtn(controlButtons[4], mousePosition); 
+    
+    // ตำแหน่งปุ่มหมุน (อยู่ใต้ปุ่ม Drop)
+    let rotBtnY = CANVAS_HEIGHT - buttonHeight - padding;
+    const rotBtnX1 = infoPanelX + padding;
+    const rotBtnX2 = infoPanelX + padding + buttonHeight + padding; // ใช้ buttonHeight เป็นความกว้างชั่วคราวเพื่อให้เป็นสี่เหลี่ยมจัตุรัส
+
+    controlButtons[2] = { ...controlButtons[2], x: rotBtnX1, y: rotBtnY, w: buttonHeight, h: buttonHeight };
+    drawControlBtn(controlButtons[2], mousePosition); 
+    
+    controlButtons[3] = { ...controlButtons[3], x: rotBtnX2, y: rotBtnY, w: buttonHeight, h: buttonHeight };
+    drawControlBtn(controlButtons[3], mousePosition); 
 }
-
 /** วาดปุ่มควบคุมแต่ละปุ่ม */
 function drawControlBtn(btn, mouse_pos, isTransparent = false) { 
     const rect = { x: btn.x, y: btn.y, w: btn.w, h: btn.h };
