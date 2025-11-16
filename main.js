@@ -1,23 +1,37 @@
-// --- Game Constants (เทียบเท่ากับส่วนบนของ Python) ---
-const BLOCK = 40;
+// --- Game Constants (ปรับให้เป็น Dynamic) ---
 const COLS = 10;
 const ROWS = 20;
-const WIDTH = COLS * BLOCK;
-const HEIGHT = ROWS * BLOCK;
-const INFO_WIDTH = 220;
-const CANVAS_WIDTH = WIDTH + INFO_WIDTH;
-const CANVAS_HEIGHT = HEIGHT;
 const DROP_DELAY = 500; // milliseconds
+
+// ขนาดเริ่มต้น
+const INITIAL_BLOCK = 40; 
+
+// ตัวแปร Dynamic
+let BLOCK; 
+let WIDTH;
+let HEIGHT;
+let INFO_WIDTH;
+let CANVAS_WIDTH;
+let CANVAS_HEIGHT;
+let infoCenterX;
+let nextBlockSize;
+
+// --- Canvas Setup ---
+const canvas = document.createElement('canvas');
+canvas.id = 'game'; // เพิ่ม ID
+document.body.appendChild(canvas);
+const ctx = canvas.getContext('2d');
+// ฟอนต์เริ่มต้นจะถูกกำหนดใน calculateSizes()
 
 // --- Colors and Shapes ---
 const COLORS = [
-    'rgb(0,255,255)',  // I
-    'rgb(0,0,255)',    // J
-    'rgb(255,165,0)',  // L
-    'rgb(255,255,0)',  // O
-    'rgb(0,255,0)',    // S
-    'rgb(128,0,128)',  // T
-    'rgb(255,0,0)'     // Z
+    'rgb(0,255,255)',   // I
+    'rgb(0,0,255)',     // J
+    'rgb(255,165,0)',   // L
+    'rgb(255,255,0)',   // O
+    'rgb(0,255,0)',     // S
+    'rgb(128,0,128)',   // T
+    'rgb(255,0,0)'      // Z
 ];
 const SHAPES = [
     [[1, 1, 1, 1]], 
@@ -32,14 +46,6 @@ const SHAPES = [
 const BLACK = 'rgb(0,0,0)';
 const GRAY = 'rgb(60,60,60)';
 const WHITE = 'rgb(255,255,255)';
-
-// --- Canvas Setup ---
-const canvas = document.createElement('canvas');
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
-document.body.appendChild(canvas);
-const ctx = canvas.getContext('2d');
-ctx.font = 'bold 22px consolas';
 
 // --- Global Game State ---
 let gameState = 'start'; // 'start', 'playing', 'gameover'
@@ -61,24 +67,67 @@ const totalAssets = 4;
     img.onload = () => {
         assetsLoaded++;
         if (assetsLoaded === totalAssets) {
+            calculateSizes(); // คำนวณขนาดครั้งแรกเมื่อโหลดเสร็จ
             mainLoop(0);
         }
     };
 });
 
-// --- Info Panel Setup ---
-const infoCenterX = WIDTH + INFO_WIDTH / 2;
-const nextBlockSize = 50;
+// --- Mobile Control Setup ---
+const controlButtons = [
+    { text: "←", key: "ArrowLeft", x: 0, y: 0, w: 0, h: 0 },
+    { text: "→", key: "ArrowRight", x: 0, y: 0, w: 0, h: 0 },
+    { text: "⟲", key: "q", x: 0, y: 0, w: 0, h: 0 }, // Rotate CCW
+    { text: "⟳", key: "ArrowUp", x: 0, y: 0, w: 0, h: 0 }, // Rotate CW
+    { text: "DROP", key: " ", x: 0, y: 0, w: 0, h: 0 }
+];
 
-// --- Helper Functions ---
+// --- Responsive Sizing Function ---
 
-/** Creates a new random Tetris piece. */
+/** คำนวณขนาด Block และ Canvas ใหม่ให้เข้ากับหน้าจอ */
+function calculateSizes() {
+    const maxCanvasWidth = window.innerWidth * 0.95; 
+    const maxCanvasHeight = window.innerHeight * 0.95; 
+
+    // กำหนดขนาด BLOCK โดยอิงจากความสูง (ROWS) และจำกัดขนาดสูงสุดที่ INITIAL_BLOCK
+    let tempBlock = Math.min(INITIAL_BLOCK, Math.floor(maxCanvasHeight / ROWS));
+    
+    // คำนวณความกว้างที่ต้องการ (Grid + Info Panel ขั้นต่ำ 120px)
+    let tempInfoWidth = Math.max(120, Math.floor(tempBlock * COLS * 0.4));
+    const requiredCanvasWidth = COLS * tempBlock + tempInfoWidth;
+    
+    // หากความกว้างเกินหน้าจอ ให้ลดขนาด Block ลง
+    if (requiredCanvasWidth > maxCanvasWidth) {
+         tempBlock = Math.floor(maxCanvasWidth / (COLS + COLS * 0.4));
+    }
+
+    // กำหนดค่าสุดท้าย
+    BLOCK = Math.max(15, tempBlock); // Block ขั้นต่ำ 15px
+    WIDTH = COLS * BLOCK;
+    HEIGHT = ROWS * BLOCK;
+    INFO_WIDTH = Math.max(120, Math.floor(WIDTH * 0.4)); 
+    CANVAS_WIDTH = WIDTH + INFO_WIDTH;
+    CANVAS_HEIGHT = HEIGHT;
+    infoCenterX = WIDTH + INFO_WIDTH / 2;
+    nextBlockSize = BLOCK * 0.8;
+
+    // อัปเดตขนาด Canvas และฟอนต์
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
+}
+
+// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
+window.addEventListener('resize', calculateSizes);
+
+
+// --- Helper Functions (โค้ดเดิม) ---
+
 function newPiece() {
     const i = Math.floor(Math.random() * SHAPES.length);
     return { shape: SHAPES[i], color: COLORS[i], x: COLS / 2 - 2, y: 0 };
 }
 
-/** Checks if a piece is in a valid position on the grid. */
 function validPosition(grid, shape, x, y) {
     for (let j = 0; j < shape.length; j++) {
         for (let i = 0; i < shape[j].length; i++) {
@@ -93,7 +142,6 @@ function validPosition(grid, shape, x, y) {
     return true;
 }
 
-/** Clears completed lines and updates the grid. */
 function clearLines(grid) {
     let newGrid = grid.filter(row => row.some(cell => cell === 0));
     const cleared = ROWS - newGrid.length;
@@ -104,7 +152,6 @@ function clearLines(grid) {
     return [newGrid, cleared];
 }
 
-/** Calculates the y-position for the ghost piece. */
 function ghostPosition(grid, piece) {
     let y = piece.y;
     while (validPosition(grid, piece.shape, piece.x, y + 1)) {
@@ -113,12 +160,10 @@ function ghostPosition(grid, piece) {
     return y;
 }
 
-/** Executes a hard drop for the current piece. */
 function hardDrop(grid, piece) {
     piece.y = ghostPosition(grid, piece);
 }
 
-/** Rotates a shape 90 degrees clockwise. */
 function rotateClockwise(shape) {
     const rows = shape.length;
     const cols = shape[0].length;
@@ -131,7 +176,6 @@ function rotateClockwise(shape) {
     return newShape;
 }
 
-/** Rotates a shape 90 degrees counter-clockwise. */
 function rotateCounterClockwise(shape) {
     const rows = shape.length;
     const cols = shape[0].length;
@@ -144,21 +188,16 @@ function rotateCounterClockwise(shape) {
     return newShape;
 }
 
-/**
- * Draws a piece (or a single block) on the canvas, using a tinted cat image.
- * Uses Alpha 0.4 for tinting color to make the blocks appear very faded.
- */
+/** Draws a piece (or a single block) on the canvas, using a tinted cat image. */
 function drawPiece(piece, offset_x = 0, offset_y = 0, alpha = 255, scale = BLOCK) {
     const boardMode = (offset_x === 0 && offset_y === 0);
     const color = piece.color;
     
-    // แยกค่า R, G, B
     const r = parseInt(color.match(/\d+/g)[0]);
     const g = parseInt(color.match(/\d+/g)[1]);
     const b = parseInt(color.match(/\d+/g)[2]);
     const alphaFloat = alpha / 255;
     
-    // สร้าง Canvas ชั่วคราวสำหรับการย้อมสี
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = scale;
     tempCanvas.height = scale;
@@ -176,17 +215,15 @@ function drawPiece(piece, offset_x = 0, offset_y = 0, alpha = 255, scale = BLOCK
                 y = offset_y + j * scale;
             }
 
-            // 1. วาดรูปแมวต้นฉบับ
             tctx.clearRect(0, 0, scale, scale);
             tctx.globalCompositeOperation = 'source-over';
             tctx.drawImage(catImg, 0, 0, scale, scale); 
 
-            // 2. ย้อมสีรูปแมว: ใช้ Alpha 0.4 
+            // ย้อมสีรูปแมว: ใช้ Alpha 0.3
             tctx.globalCompositeOperation = 'source-atop'; 
-            tctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`; // **ปรับความจางเป็น 0.4**
+            tctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`; 
             tctx.fillRect(0, 0, scale, scale); 
 
-            // 3. วาดรูปแมวที่ถูกย้อมสีแล้วลงบน Canvas หลัก
             ctx.globalAlpha = alphaFloat;
             ctx.drawImage(tempCanvas, x, y);
             ctx.globalAlpha = 1; 
@@ -197,19 +234,20 @@ function drawPiece(piece, offset_x = 0, offset_y = 0, alpha = 255, scale = BLOCK
 
 // --- Drawing Functions ---
 
-/** Draws a "modern" button. */
 function drawButtonModern(text, center_y, mouse_pos = null, width = 180, height = 50) {
-    const x = infoCenterX - 200 - width / 2;
+    // ปรับให้ปุ่มอยู่ตรงกลาง Canvas สำหรับหน้า Start/Game Over
+    const x = (CANVAS_WIDTH - width) / 2;
     const y = center_y - height / 2;
     const rect = { x, y, w: width, h: height };
 
     let hover = false;
-    if (mouse_pos) {
+    if (mouse_pos && mouse_pos.x !== -1) {
         hover = mouse_pos.x >= rect.x && mouse_pos.x <= rect.x + rect.w &&
                 mouse_pos.y >= rect.y && mouse_pos.y <= rect.y + rect.h;
     }
 
     const colorBg = hover ? 'rgb(255,140,0)' : 'rgb(255,165,0)';
+    const btnFont = `bold ${Math.max(18, Math.floor(height * 0.4))}px consolas`;
 
     // Shadow
     const shadowOffset = 3;
@@ -224,14 +262,15 @@ function drawButtonModern(text, center_y, mouse_pos = null, width = 180, height 
     ctx.fillStyle = WHITE;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.font = btnFont;
     ctx.fillText(text, rect.x + rect.w / 2, center_y);
     ctx.textAlign = 'left'; 
     ctx.textBaseline = 'alphabetic'; 
+    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`; // คืนค่าฟอนต์หลัก
 
     return rect;
 }
 
-/** Draws a rounded rectangle. */
 function roundRect(ctx, x, y, width, height, radius) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -247,14 +286,12 @@ function roundRect(ctx, x, y, width, height, radius) {
     ctx.fill();
 }
 
-/** Draws the start screen. (ไม่มีปุ่ม EXIT) */
 function drawStartScreen(mouse_pos) {
     ctx.drawImage(bgStart, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     const btnStart = drawButtonModern("START", HEIGHT / 2, mouse_pos);
     return { btnStart }; 
 }
 
-/** Draws the game over screen. (ปุ่ม EXIT กลับไปหน้า Start) */
 function drawGameOverScreen(score, mouse_pos) {
     ctx.drawImage(bgGameover, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     const btnReplay = drawButtonModern("REPLAY", HEIGHT / 2, mouse_pos);
@@ -296,24 +333,29 @@ function drawGame() {
 
     // 5. Draw Score & Next Piece Text
     ctx.fillStyle = WHITE;
-    ctx.fillText(`Score: ${score}`, WIDTH + 20, 30);
-    ctx.fillText("Next:", WIDTH + 20, 80);
+    const infoTextSize = Math.max(14, Math.floor(BLOCK * 0.5));
+    ctx.font = `bold ${infoTextSize}px consolas`;
+    ctx.fillText(`Score: ${score}`, WIDTH + 10, infoTextSize + 10);
+    ctx.fillText("Next:", WIDTH + 10, infoTextSize + 10 + 50);
 
     // 6. Draw Next Piece Preview
     if (nextPiece) {
         const pieceWidth = nextPiece.shape[0].length * nextBlockSize;
         const offset_x = WIDTH + (INFO_WIDTH - pieceWidth) / 2;
-        const offset_y = 120;
+        const offset_y = infoTextSize + 10 + 50 + 20;
         drawPiece(nextPiece, offset_x, offset_y, 255, nextBlockSize);
     }
 
-    // 7. Draw Controls
-    const controls = ["Controls:", "A / ← : Move Left", "D / → : Move Right", "Q : Rotate Left",
-                      "E / ↑ : Rotate Right", "SPACE : Hard Drop", "R : Replay"];
-    ctx.fillStyle = WHITE;
-    controls.forEach((line, i) => {
-        ctx.fillText(line, WIDTH + 20, 250 + i * 25);
-    });
+    // 7. Draw Controls (เฉพาะ PC)
+    if (window.innerWidth > 800) { // แสดง Controls เมื่อหน้าจอกว้างพอ (ถือว่าเป็น PC)
+        const controls = ["Controls:", "A / ← : Move Left", "D / → : Move Right", "Q : Rotate Left",
+                            "E / ↑ : Rotate Right", "SPACE : Hard Drop", "R : Replay"];
+        ctx.fillStyle = WHITE;
+        ctx.font = `bold ${Math.max(10, Math.floor(BLOCK * 0.3))}px consolas`;
+        controls.forEach((line, i) => {
+            ctx.fillText(line, WIDTH + 10, HEIGHT * 0.5 + i * 15);
+        });
+    }
 
     // 8. Draw Grid Lines
     ctx.strokeStyle = 'rgb(40,40,40)';
@@ -331,12 +373,77 @@ function drawGame() {
         ctx.stroke();
     }
     
-    // 9. ไม่มี Brightness Slider
+    // 9. Draw Mobile Controls (เฉพาะ Mobile)
+    if (window.innerWidth <= 800 || 'ontouchstart' in window) {
+        drawMobileControls();
+    }
 }
 
-// --- Game Logic ---
+/** วาดปุ่มควบคุมบนมือถือ */
+function drawMobileControls() {
+    const buttonSize = Math.max(50, Math.floor(WIDTH / 5)); 
+    const rotSize = Math.max(40, Math.floor(INFO_WIDTH / 2) - 10);
+    const padding = 10;
+    
+    // 1. ปุ่มซ้าย-ขวา (แถวล่างซ้าย)
+    const startX = padding;
+    const startY = HEIGHT - buttonSize - padding;
 
-/** Initializes/Resets the game state. */
+    controlButtons[0] = { ...controlButtons[0], x: startX, y: startY, w: buttonSize, h: buttonSize };
+    drawControlBtn(controlButtons[0], mousePosition);
+    
+    controlButtons[1] = { ...controlButtons[1], x: startX + buttonSize + padding, y: startY, w: buttonSize, h: buttonSize };
+    drawControlBtn(controlButtons[1], mousePosition);
+
+    // 2. ปุ่มหมุน (บน Info Panel)
+    const rotStartX = WIDTH + padding;
+    let rotY = HEIGHT - rotSize - padding;
+    
+    controlButtons[2] = { ...controlButtons[2], x: rotStartX, y: rotY, w: rotSize, h: rotSize };
+    drawControlBtn(controlButtons[2], mousePosition);
+
+    controlButtons[3] = { ...controlButtons[3], x: rotStartX + rotSize + padding, y: rotY, w: rotSize, h: rotSize };
+    drawControlBtn(controlButtons[3], mousePosition);
+
+    // 3. ปุ่ม Drop (อยู่บนปุ่มหมุน)
+    rotY = rotY - rotSize - padding;
+    controlButtons[4] = { ...controlButtons[4], x: rotStartX, y: rotY, w: INFO_WIDTH - 2 * padding, h: rotSize };
+    drawControlBtn(controlButtons[4], mousePosition);
+}
+
+/** วาดปุ่มควบคุมแต่ละปุ่ม */
+function drawControlBtn(btn, mouse_pos) {
+    const rect = { x: btn.x, y: btn.y, w: btn.w, h: btn.h };
+    let hover = false;
+    if (mouse_pos.x !== -1) { // ตรวจสอบว่ามีการแตะ/คลิกอยู่
+        hover = mouse_pos.x >= rect.x && mouse_pos.x <= rect.x + rect.w &&
+                mouse_pos.y >= rect.y && mouse_pos.y <= rect.y + rect.h;
+    }
+
+    const colorBg = hover ? 'rgb(0, 100, 200)' : 'rgb(0, 150, 255)';
+
+    // Shadow
+    const shadowOffset = 3;
+    ctx.fillStyle = 'rgb(50,50,50)';
+    roundRect(ctx, rect.x + shadowOffset, rect.y + shadowOffset, rect.w, rect.h, 8);
+    
+    // Main button
+    ctx.fillStyle = colorBg;
+    roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
+
+    // Text
+    ctx.fillStyle = WHITE;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.max(16, Math.floor(btn.h * 0.4))}px sans-serif`;
+    ctx.fillText(btn.text, rect.x + rect.w / 2, rect.y + rect.h / 2);
+    ctx.textAlign = 'left'; 
+    ctx.textBaseline = 'alphabetic'; 
+    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`; // คืนค่าฟอนต์หลัก
+}
+
+// --- Game Logic (โค้ดเดิม) ---
+
 function initGame() {
     grid = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
     currentPiece = newPiece();
@@ -346,7 +453,6 @@ function initGame() {
     gameState = 'playing';
 }
 
-/** Processes game state updates. */
 function updateGame(timestamp) {
     if (timestamp - lastDropTime > DROP_DELAY) {
         lastDropTime = timestamp;
@@ -378,7 +484,7 @@ function updateGame(timestamp) {
 
 // --- Main Game Loop ---
 
-let mousePosition = { x: 0, y: 0 };
+let mousePosition = { x: -1, y: -1 }; // ใช้ -1 เพื่อระบุว่าไม่ได้มีการแตะ/คลิก
 
 function mainLoop(timestamp) {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -395,20 +501,18 @@ function mainLoop(timestamp) {
     requestAnimationFrame(mainLoop);
 }
 
-// --- Event Listeners ---
+// --- Event Handlers ---
 
-// Keydown handler for game controls
+// Keydown handler for game controls (PC)
 document.addEventListener('keydown', (e) => {
-    if (gameState !== 'playing') {
+     if (gameState !== 'playing') {
         if (gameState === 'gameover' && (e.key === 'r' || e.key === 'R')) {
             initGame();
         } else if (gameState === 'start' && e.key === 'Enter') {
             initGame();
         } else if (e.key === 'Escape') {
             gameState = 'start';
-        } else {
-             console.log("Escape pressed on Start Screen. Game Closed.");
-        }
+        } 
         return;
     }
 
@@ -451,33 +555,74 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Mouse handlers (ไม่มี Logic ของ Slider แล้ว)
+// Mousemove (PC) - สำหรับ Hover Effect
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     mousePosition.x = e.clientX - rect.left;
     mousePosition.y = e.clientY - rect.top;
 });
 
-canvas.addEventListener('mousedown', (e) => {
-    // ไม่มี Logic ของ Slider
+// Mouseup (PC) - สำหรับคลิกปุ่ม Start/Replay/Exit
+canvas.addEventListener('mouseup', (e) => {
+    handleInteraction(mousePosition);
+    mousePosition = { x: -1, y: -1 }; 
 });
 
-canvas.addEventListener('mouseup', (e) => {
+// Touchstart (Mobile) - สำหรับแตะปุ่มควบคุม และเริ่ม/จบเกม
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); 
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    mousePosition.x = touch.clientX - rect.left;
+    mousePosition.y = touch.clientY - rect.top;
+    
+    // จัดการการแตะปุ่มควบคุมเกมทันที (Move, Rotate, Drop)
+    handleTouchDown(mousePosition);
+}, { passive: false });
+
+// Touchend (Mobile) - สำหรับปล่อยการแตะปุ่ม Start/Replay/Exit
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    // จัดการการคลิกปุ่ม Start/Replay/Exit
+    handleInteraction(mousePosition); 
+    // เคลียร์สถานะการแตะเพื่อล้าง Hover Effect
+    mousePosition = { x: -1, y: -1 }; 
+});
+
+/** ฟังก์ชันรวมสำหรับตรวจสอบการคลิก/แตะปุ่ม Start/Game Over */
+function handleInteraction(pos) {
     let buttons;
     if (gameState === 'start') {
-        buttons = drawStartScreen(mousePosition);
-        if (mousePosition.x >= buttons.btnStart.x && mousePosition.x <= buttons.btnStart.x + buttons.btnStart.w &&
-            mousePosition.y >= buttons.btnStart.y && mousePosition.y <= buttons.btnStart.y + buttons.btnStart.h) {
+        buttons = drawStartScreen(pos);
+        if (pos.x >= buttons.btnStart.x && pos.x <= buttons.btnStart.x + buttons.btnStart.w &&
+            pos.y >= buttons.btnStart.y && pos.y <= buttons.btnStart.y + buttons.btnStart.h) {
             initGame(); 
         } 
     } else if (gameState === 'gameover') {
-        buttons = drawGameOverScreen(score, mousePosition);
-        if (mousePosition.x >= buttons.btnReplay.x && mousePosition.x <= buttons.btnReplay.x + buttons.btnReplay.w &&
-            mousePosition.y >= buttons.btnReplay.y && mousePosition.y <= buttons.btnReplay.y + buttons.btnReplay.h) {
+        buttons = drawGameOverScreen(score, pos);
+        if (pos.x >= buttons.btnReplay.x && pos.x <= buttons.btnReplay.x + buttons.btnReplay.w &&
+            pos.y >= buttons.btnReplay.y && pos.y <= buttons.btnReplay.y + buttons.btnReplay.h) {
             initGame(); 
-        } else if (mousePosition.x >= buttons.btnExit.x && mousePosition.x <= buttons.btnExit.x + buttons.btnExit.w &&
-            mousePosition.y >= buttons.btnExit.y && mousePosition.y <= buttons.btnExit.y + buttons.btnExit.h) {
+        } else if (pos.x >= buttons.btnExit.x && pos.x <= buttons.btnExit.x + buttons.btnExit.w &&
+            pos.y >= buttons.btnExit.y && pos.y <= buttons.btnExit.y + buttons.btnExit.h) {
             gameState = 'start';
         }
     }
-});
+}
+
+/** ฟังก์ชันสำหรับจัดการการแตะ (Touch Down) บนปุ่มควบคุมเกม */
+function handleTouchDown(pos) {
+    if (gameState !== 'playing') return;
+
+    // ตรวจสอบปุ่มควบคุมบนหน้าจอ
+    for (const btn of controlButtons) {
+        if (pos.x >= btn.x && pos.x <= btn.x + btn.w &&
+            pos.y >= btn.y && pos.y <= btn.y + btn.h) {
+            
+            // จำลองการกดปุ่ม (ใช้ key event เดิม)
+            const event = new KeyboardEvent('keydown', { 'key': btn.key });
+            document.dispatchEvent(event);
+            return;
+        }
+    }
+}
