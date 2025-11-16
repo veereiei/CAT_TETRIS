@@ -1,18 +1,16 @@
-/* จัดองค์ประกอบ Body และ Canvas ให้อยู่กึ่งกลางหน้าจอ */
 body {
-    margin: 0;
-    background: #000; /* พื้นหลังสีดำ */
-    display: flex;
-    justify-content: center; /* จัดกึ่งกลางแนวนอน */
-    align-items: center; /* จัดกึ่งกลางแนวตั้ง */
-    height: 100vh;
-    font-family: consolas, monospace;
-    overflow: hidden; /* ซ่อน scrollbar */
+  margin: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: consolas, monospace;
 }
-
-canvas { 
-    display: block; 
-    border: 2px solid #555; /* เพิ่มเส้นขอบเพื่อให้มองเห็นขอบเขตของเกม */
+canvas { display: block; }
+#slider {
+  position: absolute;
+  left: calc(100vw/2 + 200px);
+  top: calc(50vh + 220px);
+  width: 200px;
 }
-
-/* ไม่มีโค้ดสำหรับ #slider อีกต่อไป */
