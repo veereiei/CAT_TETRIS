@@ -85,27 +85,47 @@ const controlButtons = [
 // --- Responsive Sizing Function ---
 
 /** คำนวณขนาด Block และ Canvas ใหม่ให้เข้ากับหน้าจอ */
+// --- Responsive Sizing Function (ปรับปรุง) ---
+
+/** คำนวณขนาด Block และ Canvas ใหม่ให้เข้ากับหน้าจอ */
 function calculateSizes() {
+    // 1. กำหนดอัตราส่วนที่ต้องการ (Width : Height)
+    // Grid: 10 Block, Info Panel: ประมาณ 4 Block (40% ของ 10)
+    // Canvas รวม: 14 Block (กว้าง) x 20 Block (สูง)
+    const COLS_RATIO = COLS + COLS * 0.4; // 14.0
+    const ROWS_RATIO = ROWS;              // 20.0
+    
     const maxCanvasWidth = window.innerWidth * 0.95; 
     const maxCanvasHeight = window.innerHeight * 0.95; 
 
-    // กำหนดขนาด BLOCK โดยอิงจากความสูง (ROWS) และจำกัดขนาดสูงสุดที่ INITIAL_BLOCK
-    let tempBlock = Math.min(INITIAL_BLOCK, Math.floor(maxCanvasHeight / ROWS));
-    
-    // คำนวณความกว้างที่ต้องการ (Grid + Info Panel ขั้นต่ำ 120px)
-    let tempInfoWidth = Math.max(120, Math.floor(tempBlock * COLS * 0.4));
-    const requiredCanvasWidth = COLS * tempBlock + tempInfoWidth;
-    
-    // หากความกว้างเกินหน้าจอ ให้ลดขนาด Block ลง
-    if (requiredCanvasWidth > maxCanvasWidth) {
-         tempBlock = Math.floor(maxCanvasWidth / (COLS + COLS * 0.4));
-    }
+    // 2. คำนวณขนาด Block สูงสุดที่เป็นไปได้ โดยอิงจากความกว้างและความสูง
+    // Block_w = maxCanvasWidth / COLS_RATIO (14.0)
+    // Block_h = maxCanvasHeight / ROWS_RATIO (20.0)
+    const blockBasedOnWidth = Math.floor(maxCanvasWidth / COLS_RATIO);
+    const blockBasedOnHeight = Math.floor(maxCanvasHeight / ROWS_RATIO);
 
-    // กำหนดค่าสุดท้าย
-    BLOCK = Math.max(15, tempBlock); // Block ขั้นต่ำ 15px
+    // 3. เลือกขนาด Block ที่เล็กที่สุด เพื่อให้ Canvas ไม่เกินขอบจอในทุกทิศทาง
+    let tempBlock = Math.min(blockBasedOnWidth, blockBasedOnHeight);
+    
+    // 4. จำกัดขนาด Block
+    BLOCK = Math.max(15, Math.min(INITIAL_BLOCK, tempBlock)); // ขั้นต่ำ 15px, สูงสุด 40px
+
+    // 5. กำหนดค่าสุดท้ายตาม BLOCK ใหม่
     WIDTH = COLS * BLOCK;
     HEIGHT = ROWS * BLOCK;
+    
+    // คำนวณ INFO_WIDTH ตามสัดส่วน 40% ของ Grid WIDTH
     INFO_WIDTH = Math.max(120, Math.floor(WIDTH * 0.4)); 
+    
+    // ตรวจสอบขั้นสุดท้าย: หาก INFO_WIDTH ขั้นต่ำ (120) ทำให้ Canvas กว้างเกินไป ให้ปรับ Block ลงเล็กน้อย
+    if (WIDTH + INFO_WIDTH > maxCanvasWidth) {
+         // นี่เป็นกรณีที่ INFO_WIDTH โดนบังคับให้เป็น 120px และทำให้เกินขอบ
+         // ปรับ BLOCK อีกครั้งให้แน่ใจว่า Canvas ไม่เกิน 95% ของความกว้างหน้าจอ
+         BLOCK = Math.floor((maxCanvasWidth - 120) / COLS);
+         WIDTH = COLS * BLOCK;
+         INFO_WIDTH = 120;
+    }
+
     CANVAS_WIDTH = WIDTH + INFO_WIDTH;
     CANVAS_HEIGHT = HEIGHT;
     infoCenterX = WIDTH + INFO_WIDTH / 2;
@@ -115,8 +135,12 @@ function calculateSizes() {
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
+    
+    // เพิ่มการปรับตำแหน่งปุ่มมือถือ
+    // drawMobileControls() จะใช้ค่า BLOCK, WIDTH, HEIGHT, INFO_WIDTH ที่อัปเดตแล้ว
 }
-
+// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
+window.addEventListener('resize', calculateSizes);
 // อัปเดตขนาดเมื่อหน้าจอถูกปรับ
 window.addEventListener('resize', calculateSizes);
 
