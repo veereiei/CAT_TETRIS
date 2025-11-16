@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: consolas, monospace;
+}
+canvas { display: block; }
+#slider {
+  position: absolute;
+  left: calc(100vw/2 + 200px);
+  top: calc(50vh + 220px);
+  width: 200px;
+}
