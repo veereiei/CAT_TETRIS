@@ -413,7 +413,7 @@ function drawMobileControls() {
 }
 
 /** วาดปุ่มควบคุมแต่ละปุ่ม */
-function drawControlBtn(btn, mouse_pos, isTransparent = false) { // <<< เพิ่ม isTransparent
+function drawControlBtn(btn, mouse_pos, isTransparent = false) { 
     const rect = { x: btn.x, y: btn.y, w: btn.w, h: btn.h };
     let hover = false;
     
@@ -422,8 +422,8 @@ function drawControlBtn(btn, mouse_pos, isTransparent = false) { // <<< เพ�
                 mouse_pos.y >= rect.y && mouse_pos.y <= rect.y + rect.h;
     }
 
-    // ถ้าปุ่มเป็นแบบ Transparent เราจะใช้สีพื้นหลังที่โปร่งใสมาก ๆ หรือข้ามการวาด Shadow/Main button
-    if (!isTransparent) { // <<< ตรวจสอบ IsTransparent
+    if (!isTransparent) { 
+        // โค้ดเดิมสำหรับปุ่มสีฟ้า (Rotate/Drop)
         const colorBg = hover ? 'rgb(0, 100, 200)' : 'rgb(0, 150, 255)';
 
         // Shadow
@@ -435,17 +435,18 @@ function drawControlBtn(btn, mouse_pos, isTransparent = false) { // <<< เพ�
         ctx.fillStyle = colorBg;
         roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
 
-        // Text (ปุ่มที่ไม่ใสจะแสดงข้อความสีขาวปกติ)
+        // Text
         ctx.fillStyle = WHITE;
 
     } else {
-        // สำหรับปุ่มใส (ซ้าย/ขวา) - ไม่ต้องวาดพื้นหลังหรือเงา
-        // แต่ถ้า Hover ให้แสดงเป็นสีเทาอ่อนๆ เพื่อให้รู้ว่ากดติด
-        ctx.fillStyle = hover ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+        // สำหรับปุ่มใส (ซ้าย/ขวา) - ปรับให้เข้มขึ้น
+        
+        // พื้นหลังปุ่ม: สีดำโปร่งใสเข้มขึ้น (จาก 0.05 เป็น 0.2)
+        ctx.fillStyle = hover ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.2)'; 
         roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
         
-        // Text (ปุ่มใสจะแสดงข้อความสีเทาเข้ม หรือซ่อนไปเลย)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // ข้อความโปร่งใส
+        // Text: สีขาวโปร่งใสเข้มขึ้น (จาก 0.2 เป็น 0.7)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
     }
 
     ctx.textAlign = 'center';
