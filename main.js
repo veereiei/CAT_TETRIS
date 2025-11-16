@@ -1,12 +1,11 @@
-// --- Game Constants (ปรับให้เป็น Dynamic) ---
+// --- Game Constants ---
 const COLS = 10;
 const ROWS = 20;
 const DROP_DELAY = 500; // milliseconds
-
-// ขนาดเริ่มต้น
 const INITIAL_BLOCK = 40; 
+const SWIPE_THRESHOLD = 50; // ระยะลากสำหรับ Swipe (Mobile)
 
-// ตัวแปร Dynamic
+// --- Dynamic Variables (จะถูกกำหนดใน calculateSizes) ---
 let BLOCK; 
 let WIDTH;
 let HEIGHT;
@@ -15,13 +14,6 @@ let CANVAS_WIDTH;
 let CANVAS_HEIGHT;
 let infoCenterX;
 let nextBlockSize;
-
-// --- Canvas Setup ---
-const canvas = document.createElement('canvas');
-canvas.id = 'game'; // เพิ่ม ID
-document.body.appendChild(canvas);
-const ctx = canvas.getContext('2d');
-// ฟอนต์เริ่มต้นจะถูกกำหนดใน calculateSizes()
 
 // --- Colors and Shapes ---
 const COLORS = [
@@ -47,8 +39,14 @@ const BLACK = 'rgb(0,0,0)';
 const GRAY = 'rgb(60,60,60)';
 const WHITE = 'rgb(255,255,255)';
 
+// --- Canvas Setup ---
+const canvas = document.createElement('canvas');
+canvas.id = 'game'; 
+document.body.appendChild(canvas);
+const ctx = canvas.getContext('2d');
+
 // --- Global Game State ---
-let gameState = 'start'; // 'start', 'playing', 'gameover'
+let gameState = 'start'; 
 let grid = [];
 let currentPiece;
 let nextPiece;
@@ -67,7 +65,7 @@ const totalAssets = 4;
     img.onload = () => {
         assetsLoaded++;
         if (assetsLoaded === totalAssets) {
-            calculateSizes(); // คำนวณขนาดครั้งแรกเมื่อโหลดเสร็จ
+            calculateSizes(); 
             mainLoop(0);
         }
     };
@@ -75,8 +73,6 @@ const totalAssets = 4;
 
 // --- Mobile Control Setup ---
 const controlButtons = [
-    { text: "←", key: "ArrowLeft", x: 0, y: 0, w: 0, h: 0 },
-    { text: "→", key: "ArrowRight", x: 0, y: 0, w: 0, h: 0 },
     { text: "⟲", key: "q", x: 0, y: 0, w: 0, h: 0 }, // Rotate CCW
     { text: "⟳", key: "ArrowUp", x: 0, y: 0, w: 0, h: 0 }, // Rotate CW
     { text: "DROP", key: " ", x: 0, y: 0, w: 0, h: 0 }
@@ -84,25 +80,20 @@ const controlButtons = [
 
 // --- Responsive Sizing Function ---
 
-/** คำนวณขนาด Block และ Canvas ใหม่ให้เข้ากับหน้าจอ */
 function calculateSizes() {
     const maxCanvasWidth = window.innerWidth * 0.95; 
     const maxCanvasHeight = window.innerHeight * 0.95; 
 
-    // กำหนดขนาด BLOCK โดยอิงจากความสูง (ROWS) และจำกัดขนาดสูงสุดที่ INITIAL_BLOCK
     let tempBlock = Math.min(INITIAL_BLOCK, Math.floor(maxCanvasHeight / ROWS));
     
-    // คำนวณความกว้างที่ต้องการ (Grid + Info Panel ขั้นต่ำ 120px)
     let tempInfoWidth = Math.max(120, Math.floor(tempBlock * COLS * 0.4));
     const requiredCanvasWidth = COLS * tempBlock + tempInfoWidth;
     
-    // หากความกว้างเกินหน้าจอ ให้ลดขนาด Block ลง
     if (requiredCanvasWidth > maxCanvasWidth) {
          tempBlock = Math.floor(maxCanvasWidth / (COLS + COLS * 0.4));
     }
 
-    // กำหนดค่าสุดท้าย
-    BLOCK = Math.max(15, tempBlock); // Block ขั้นต่ำ 15px
+    BLOCK = Math.max(15, tempBlock);
     WIDTH = COLS * BLOCK;
     HEIGHT = ROWS * BLOCK;
     INFO_WIDTH = Math.max(120, Math.floor(WIDTH * 0.4)); 
@@ -111,23 +102,23 @@ function calculateSizes() {
     infoCenterX = WIDTH + INFO_WIDTH / 2;
     nextBlockSize = BLOCK * 0.8;
 
-    // อัปเดตขนาด Canvas และฟอนต์
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
 }
 
-// อัปเดตขนาดเมื่อหน้าจอถูกปรับ
 window.addEventListener('resize', calculateSizes);
 
 
-// --- Helper Functions (โค้ดเดิม) ---
+// --- Helper Functions ---
 
+/** Creates a new random Tetris piece. */
 function newPiece() {
     const i = Math.floor(Math.random() * SHAPES.length);
     return { shape: SHAPES[i], color: COLORS[i], x: COLS / 2 - 2, y: 0 };
 }
 
+/** Checks if a piece is in a valid position on the grid. */
 function validPosition(grid, shape, x, y) {
     for (let j = 0; j < shape.length; j++) {
         for (let i = 0; i < shape[j].length; i++) {
@@ -142,6 +133,7 @@ function validPosition(grid, shape, x, y) {
     return true;
 }
 
+/** Clears completed lines and updates the grid. */
 function clearLines(grid) {
     let newGrid = grid.filter(row => row.some(cell => cell === 0));
     const cleared = ROWS - newGrid.length;
@@ -152,6 +144,7 @@ function clearLines(grid) {
     return [newGrid, cleared];
 }
 
+/** Calculates the y-position for the ghost piece. */
 function ghostPosition(grid, piece) {
     let y = piece.y;
     while (validPosition(grid, piece.shape, piece.x, y + 1)) {
@@ -160,10 +153,12 @@ function ghostPosition(grid, piece) {
     return y;
 }
 
+/** Executes a hard drop for the current piece. */
 function hardDrop(grid, piece) {
     piece.y = ghostPosition(grid, piece);
 }
 
+/** Rotates a shape 90 degrees clockwise. */
 function rotateClockwise(shape) {
     const rows = shape.length;
     const cols = shape[0].length;
@@ -176,6 +171,7 @@ function rotateClockwise(shape) {
     return newShape;
 }
 
+/** Rotates a shape 90 degrees counter-clockwise. */
 function rotateCounterClockwise(shape) {
     const rows = shape.length;
     const cols = shape[0].length;
@@ -235,7 +231,6 @@ function drawPiece(piece, offset_x = 0, offset_y = 0, alpha = 255, scale = BLOCK
 // --- Drawing Functions ---
 
 function drawButtonModern(text, center_y, mouse_pos = null, width = 180, height = 50) {
-    // ปรับให้ปุ่มอยู่ตรงกลาง Canvas สำหรับหน้า Start/Game Over
     const x = (CANVAS_WIDTH - width) / 2;
     const y = center_y - height / 2;
     const rect = { x, y, w: width, h: height };
@@ -266,7 +261,7 @@ function drawButtonModern(text, center_y, mouse_pos = null, width = 180, height 
     ctx.fillText(text, rect.x + rect.w / 2, center_y);
     ctx.textAlign = 'left'; 
     ctx.textBaseline = 'alphabetic'; 
-    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`; // คืนค่าฟอนต์หลัก
+    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
 
     return rect;
 }
@@ -346,8 +341,8 @@ function drawGame() {
         drawPiece(nextPiece, offset_x, offset_y, 255, nextBlockSize);
     }
 
-    // 7. Draw Controls (เฉพาะ PC)
-    if (window.innerWidth > 800) { // แสดง Controls เมื่อหน้าจอกว้างพอ (ถือว่าเป็น PC)
+    // 7. Draw Controls (PC)
+    if (window.innerWidth > 800) { 
         const controls = ["Controls:", "A / ← : Move Left", "D / → : Move Right", "Q : Rotate Left",
                             "E / ↑ : Rotate Right", "SPACE : Hard Drop", "R : Replay"];
         ctx.fillStyle = WHITE;
@@ -373,7 +368,7 @@ function drawGame() {
         ctx.stroke();
     }
     
-    // 9. Draw Mobile Controls (เฉพาะ Mobile)
+    // 9. Draw Mobile Controls (Mobile)
     if (window.innerWidth <= 800 || 'ontouchstart' in window) {
         drawMobileControls();
     }
@@ -381,41 +376,32 @@ function drawGame() {
 
 /** วาดปุ่มควบคุมบนมือถือ */
 function drawMobileControls() {
-    const buttonSize = Math.max(50, Math.floor(WIDTH / 5)); 
-    const rotSize = Math.max(40, Math.floor(INFO_WIDTH / 2) - 10);
+    const buttonSize = Math.max(50, Math.floor(INFO_WIDTH / 2) - 10);
     const padding = 10;
     
-    // 1. ปุ่มซ้าย-ขวา (แถวล่างซ้าย)
-    const startX = padding;
-    const startY = HEIGHT - buttonSize - padding;
-
-    controlButtons[0] = { ...controlButtons[0], x: startX, y: startY, w: buttonSize, h: buttonSize };
-    drawControlBtn(controlButtons[0], mousePosition);
-    
-    controlButtons[1] = { ...controlButtons[1], x: startX + buttonSize + padding, y: startY, w: buttonSize, h: buttonSize };
-    drawControlBtn(controlButtons[1], mousePosition);
-
-    // 2. ปุ่มหมุน (บน Info Panel)
+    // 1. ปุ่มหมุน (แถวล่าง)
+    let rotY = HEIGHT - buttonSize - padding;
     const rotStartX = WIDTH + padding;
-    let rotY = HEIGHT - rotSize - padding;
     
-    controlButtons[2] = { ...controlButtons[2], x: rotStartX, y: rotY, w: rotSize, h: rotSize };
-    drawControlBtn(controlButtons[2], mousePosition);
+    controlButtons[0] = { ...controlButtons[0], x: rotStartX, y: rotY, w: buttonSize, h: buttonSize };
+    drawControlBtn(controlButtons[0], mousePosition); // Rotate CCW
 
-    controlButtons[3] = { ...controlButtons[3], x: rotStartX + rotSize + padding, y: rotY, w: rotSize, h: rotSize };
-    drawControlBtn(controlButtons[3], mousePosition);
+    controlButtons[1] = { ...controlButtons[1], x: rotStartX + buttonSize + padding, y: rotY, w: buttonSize, h: buttonSize };
+    drawControlBtn(controlButtons[1], mousePosition); // Rotate CW
 
-    // 3. ปุ่ม Drop (อยู่บนปุ่มหมุน)
-    rotY = rotY - rotSize - padding;
-    controlButtons[4] = { ...controlButtons[4], x: rotStartX, y: rotY, w: INFO_WIDTH - 2 * padding, h: rotSize };
-    drawControlBtn(controlButtons[4], mousePosition);
+    // 2. ปุ่ม Drop (อยู่บนปุ่มหมุน)
+    rotY = rotY - buttonSize - padding;
+    controlButtons[2] = { ...controlButtons[2], x: rotStartX, y: rotY, w: INFO_WIDTH - 2 * padding, h: buttonSize };
+    drawControlBtn(controlButtons[2], mousePosition); // Hard Drop
+    
+    // หมายเหตุ: ปุ่มซ้าย/ขวาถูกแทนที่ด้วย Swipe
 }
 
 /** วาดปุ่มควบคุมแต่ละปุ่ม */
 function drawControlBtn(btn, mouse_pos) {
     const rect = { x: btn.x, y: btn.y, w: btn.w, h: btn.h };
     let hover = false;
-    if (mouse_pos.x !== -1) { // ตรวจสอบว่ามีการแตะ/คลิกอยู่
+    if (mouse_pos.x !== -1) { 
         hover = mouse_pos.x >= rect.x && mouse_pos.x <= rect.x + rect.w &&
                 mouse_pos.y >= rect.y && mouse_pos.y <= rect.y + rect.h;
     }
@@ -439,11 +425,12 @@ function drawControlBtn(btn, mouse_pos) {
     ctx.fillText(btn.text, rect.x + rect.w / 2, rect.y + rect.h / 2);
     ctx.textAlign = 'left'; 
     ctx.textBaseline = 'alphabetic'; 
-    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`; // คืนค่าฟอนต์หลัก
+    ctx.font = `bold ${Math.max(14, Math.floor(BLOCK * 0.5))}px consolas`;
 }
 
-// --- Game Logic (โค้ดเดิม) ---
+// --- Game Logic ---
 
+/** Initializes/Resets the game state. */
 function initGame() {
     grid = Array(ROWS).fill(0).map(() => Array(COLS).fill(0));
     currentPiece = newPiece();
@@ -453,6 +440,7 @@ function initGame() {
     gameState = 'playing';
 }
 
+/** Processes game state updates. */
 function updateGame(timestamp) {
     if (timestamp - lastDropTime > DROP_DELAY) {
         lastDropTime = timestamp;
@@ -484,7 +472,8 @@ function updateGame(timestamp) {
 
 // --- Main Game Loop ---
 
-let mousePosition = { x: -1, y: -1 }; // ใช้ -1 เพื่อระบุว่าไม่ได้มีการแตะ/คลิก
+let mousePosition = { x: -1, y: -1 };
+let startX = 0; 
 
 function mainLoop(timestamp) {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -501,23 +490,14 @@ function mainLoop(timestamp) {
     requestAnimationFrame(mainLoop);
 }
 
-// --- Event Handlers ---
+// --- Control Logic ---
 
-// Keydown handler for game controls (PC)
-document.addEventListener('keydown', (e) => {
-     if (gameState !== 'playing') {
-        if (gameState === 'gameover' && (e.key === 'r' || e.key === 'R')) {
-            initGame();
-        } else if (gameState === 'start' && e.key === 'Enter') {
-            initGame();
-        } else if (e.key === 'Escape') {
-            gameState = 'start';
-        } 
-        return;
-    }
+/** ฟังก์ชันสำหรับสั่งงานควบคุมเกมโดยตรง */
+function handleControls(key) {
+    if (gameState !== 'playing') return;
 
     const shape = currentPiece.shape;
-    switch (e.key) {
+    switch (key) {
         case 'ArrowLeft':
         case 'a':
             if (validPosition(grid, shape, currentPiece.x - 1, currentPiece.y)) {
@@ -530,27 +510,89 @@ document.addEventListener('keydown', (e) => {
                 currentPiece.x++;
             }
             break;
-        case 'ArrowUp':
-        case 'e': 
+        case 'ArrowUp': // Rotate CW (ปุ่มบนคีย์บอร์ด หรือ E)
+        case 'e':
             const rotatedCW = rotateClockwise(shape);
             if (validPosition(grid, rotatedCW, currentPiece.x, currentPiece.y)) {
                 currentPiece.shape = rotatedCW;
             }
             break;
-        case 'q': 
+        case 'q': // Rotate CCW
             const rotatedCCW = rotateCounterClockwise(shape);
             if (validPosition(grid, rotatedCCW, currentPiece.x, currentPiece.y)) {
                 currentPiece.shape = rotatedCCW;
             }
             break;
-        case ' ': 
+        case ' ': // Hard Drop
             hardDrop(grid, currentPiece);
             lastDropTime = 0; 
             updateGame(DROP_DELAY + 1);
             break;
+    }
+}
+
+/** ฟังก์ชันรวมสำหรับตรวจสอบการคลิก/แตะปุ่ม Start/Game Over และปุ่มควบคุมบนหน้าจอ */
+function handleInteraction(pos, isTap) {
+    // 1. ตรวจสอบปุ่ม Start/Game Over
+    if (gameState === 'start') {
+        const buttons = drawStartScreen({ x: -1, y: -1 }); 
+        if (pos.x >= buttons.btnStart.x && pos.x <= buttons.btnStart.x + buttons.btnStart.w &&
+            pos.y >= buttons.btnStart.y && pos.y <= buttons.btnStart.y + buttons.btnStart.h) {
+            initGame(); 
+        } 
+    } else if (gameState === 'gameover') {
+        const buttons = drawGameOverScreen(score, { x: -1, y: -1 });
+        if (pos.x >= buttons.btnReplay.x && pos.x <= buttons.btnReplay.x + buttons.btnReplay.w &&
+            pos.y >= buttons.btnReplay.y && pos.y <= buttons.btnReplay.y + buttons.btnReplay.h) {
+            initGame(); 
+        } else if (pos.x >= buttons.btnExit.x && pos.x <= buttons.btnExit.x + buttons.btnExit.w &&
+            pos.y >= buttons.btnExit.y && pos.y <= buttons.btnExit.y + buttons.btnExit.h) {
+            gameState = 'start';
+        }
+    } 
+    
+    // 2. ตรวจสอบปุ่มควบคุมบนหน้าจอ (เฉพาะถ้าเป็น Tap/Click และอยู่ในโหมด Playing)
+    if (gameState === 'playing' && isTap) {
+         for (const btn of controlButtons) {
+            if (pos.x >= btn.x && pos.x <= btn.x + btn.w &&
+                pos.y >= btn.y && pos.y <= btn.y + btn.h) {
+                handleControls(btn.key);
+                return;
+            }
+        }
+    }
+}
+
+// --- Event Listeners ---
+
+// Keydown handler (PC Controls)
+document.addEventListener('keydown', (e) => {
+    // Escape/Enter/R ในหน้า Start/Game Over
+    if (gameState !== 'playing') {
+        if (gameState === 'gameover' && (e.key === 'r' || e.key === 'R')) {
+            initGame();
+        } else if (gameState === 'start' && e.key === 'Enter') {
+            initGame();
+        } else if (e.key === 'Escape') {
+            gameState = 'start';
+        } 
+        return;
+    }
+    
+    // Controls ในหน้า Playing
+    switch (e.key) {
+        case 'ArrowLeft':
+        case 'a':
+        case 'ArrowRight':
+        case 'd':
+        case 'ArrowUp':
+        case 'e':
+        case 'q':
+        case ' ':
         case 'r':
         case 'R':
-            initGame(); 
+            handleControls(e.key);
+            if (e.key === 'r' || e.key === 'R') initGame(); 
             break;
     }
 });
@@ -562,67 +604,50 @@ canvas.addEventListener('mousemove', (e) => {
     mousePosition.y = e.clientY - rect.top;
 });
 
-// Mouseup (PC) - สำหรับคลิกปุ่ม Start/Replay/Exit
+// Mouseup (PC)
 canvas.addEventListener('mouseup', (e) => {
-    handleInteraction(mousePosition);
+    // สั่งงานด้วยการแตะ/คลิก (ถือเป็น Tap)
+    handleInteraction(mousePosition, true); 
     mousePosition = { x: -1, y: -1 }; 
 });
 
-// Touchstart (Mobile) - สำหรับแตะปุ่มควบคุม และเริ่ม/จบเกม
+// Touchstart (Mobile) - เก็บตำแหน่งเริ่มต้นสำหรับการ Swipe
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault(); 
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
+    
+    // เก็บตำแหน่งเริ่มต้นสำหรับการ Swipe
+    startX = touch.clientX; 
+    
+    // กำหนดตำแหน่ง Mouse สำหรับ Tap/Button Check
     mousePosition.x = touch.clientX - rect.left;
     mousePosition.y = touch.clientY - rect.top;
     
-    // จัดการการแตะปุ่มควบคุมเกมทันที (Move, Rotate, Drop)
-    handleTouchDown(mousePosition);
 }, { passive: false });
 
-// Touchend (Mobile) - สำหรับปล่อยการแตะปุ่ม Start/Replay/Exit
+// Touchend (Mobile) - ตรวจสอบ Tap หรือ Swipe
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    // จัดการการคลิกปุ่ม Start/Replay/Exit
-    handleInteraction(mousePosition); 
-    // เคลียร์สถานะการแตะเพื่อล้าง Hover Effect
+    
+    // 1. ตรวจสอบการ Swipe
+    const endX = e.changedTouches[0].clientX;
+    const diffX = endX - startX;
+    
+    if (Math.abs(diffX) > SWIPE_THRESHOLD && gameState === 'playing') {
+        // เป็น Swipe: เคลื่อนที่ซ้าย/ขวา
+        if (diffX > 0) {
+            handleControls('ArrowRight'); // Swipe ขวา
+        } else {
+            handleControls('ArrowLeft');  // Swipe ซ้าย
+        }
+        
+    } else {
+        // เป็น Tap: ตรวจสอบปุ่ม Start/Game Over หรือปุ่ม Rotate/Drop บนหน้าจอ
+        handleInteraction(mousePosition, true); 
+    }
+    
+    // เคลียร์สถานะการแตะ
     mousePosition = { x: -1, y: -1 }; 
+    startX = 0;
 });
-
-/** ฟังก์ชันรวมสำหรับตรวจสอบการคลิก/แตะปุ่ม Start/Game Over */
-function handleInteraction(pos) {
-    let buttons;
-    if (gameState === 'start') {
-        buttons = drawStartScreen(pos);
-        if (pos.x >= buttons.btnStart.x && pos.x <= buttons.btnStart.x + buttons.btnStart.w &&
-            pos.y >= buttons.btnStart.y && pos.y <= buttons.btnStart.y + buttons.btnStart.h) {
-            initGame(); 
-        } 
-    } else if (gameState === 'gameover') {
-        buttons = drawGameOverScreen(score, pos);
-        if (pos.x >= buttons.btnReplay.x && pos.x <= buttons.btnReplay.x + buttons.btnReplay.w &&
-            pos.y >= buttons.btnReplay.y && pos.y <= buttons.btnReplay.y + buttons.btnReplay.h) {
-            initGame(); 
-        } else if (pos.x >= buttons.btnExit.x && pos.x <= buttons.btnExit.x + buttons.btnExit.w &&
-            pos.y >= buttons.btnExit.y && pos.y <= buttons.btnExit.y + buttons.btnExit.h) {
-            gameState = 'start';
-        }
-    }
-}
-
-/** ฟังก์ชันสำหรับจัดการการแตะ (Touch Down) บนปุ่มควบคุมเกม */
-function handleTouchDown(pos) {
-    if (gameState !== 'playing') return;
-
-    // ตรวจสอบปุ่มควบคุมบนหน้าจอ
-    for (const btn of controlButtons) {
-        if (pos.x >= btn.x && pos.x <= btn.x + btn.w &&
-            pos.y >= btn.y && pos.y <= btn.y + btn.h) {
-            
-            // จำลองการกดปุ่ม (ใช้ key event เดิม)
-            const event = new KeyboardEvent('keydown', { 'key': btn.key });
-            document.dispatchEvent(event);
-            return;
-        }
-    }
-}
