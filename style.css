@@ -6,5 +6,5 @@ body {
     align-items: center; /* จัดกึ่งกลางแนวตั้ง */
     height: 100vh;
     font-family: consolas, monospace;
-    overflow: hidden; /* ซ่อน scrollbar */
 }
+
