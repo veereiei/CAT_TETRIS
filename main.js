@@ -299,7 +299,7 @@ function drawGameOverScreen(score, mouse_pos) {
     
     ctx.fillStyle = WHITE;
     ctx.textAlign = 'center';
-    ctx.fillText(`Your Score : ${score}`, CANVAS_WIDTH / 2, HEIGHT / 2 - 70);
+    ctx.fillText(`Your Score : ${score}`, CANVAS_WIDTH / 2, HEIGHT / 2 - 60);
     ctx.textAlign = 'left';
 
     return { btnReplay, btnExit };
