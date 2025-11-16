@@ -1,16 +1,15 @@
 body {
-  margin: 0;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-family: consolas, monospace;
+    margin: 0;
+    background: #000; /* พื้นหลังสีดำ */
+    display: flex;
+    justify-content: center; /* จัดกึ่งกลางแนวนอน */
+    align-items: center; /* จัดกึ่งกลางแนวตั้ง */
+    height: 100vh;
+    font-family: consolas, monospace;
+    overflow: hidden; /* ซ่อน scrollbar */
 }
-canvas { display: block; }
-#slider {
-  position: absolute;
-  left: calc(100vw/2 + 200px);
-  top: calc(50vh + 220px);
-  width: 200px;
+
+canvas { 
+  display: block; 
+  border: 2px solid transparent;;
 }
