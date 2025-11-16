@@ -1,10 +1,20 @@
-body {
-    background: #000; /* พื้นหลังสีดำ */
-    width: 83%;
-    display: flex;
-    justify-content: center; /* จัดกึ่งกลางแนวนอน */
-    align-items: center; /* จัดกึ่งกลางแนวตั้ง */
-    height: 100vh;
-    font-family: consolas, monospace;
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* ปิด Scrollbar ที่ทำให้หน้าจอล้น */
 }
 
+body {
+    /* จัดกึ่งกลางเนื้อหาในแนวตั้งและแนวนอน */
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; /* ทำให้ body ครอบคลุมความสูงจอเต็มที่ */
+    background-color: #000;
+    font-family: 'Inter', sans-serif;
+    /* overflow: hidden; // บรรทัดนี้อาจมีอยู่แล้ว */ 
+    flex-grow: 1;
+}
+/* ... โค้ดส่วนอื่น ๆ ... */
