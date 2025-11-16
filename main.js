@@ -446,7 +446,7 @@ function drawControlBtn(btn, mouse_pos, isTransparent = false) {
         roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 8);
         
         // Text: สีขาวโปร่งใสเข้มขึ้น (จาก 0.2 เป็น 0.7)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
+        ctx.fillStyle = 'rgba(255, 255, 255, 1.0)'; 
     }
 
     ctx.textAlign = 'center';
